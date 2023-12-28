@@ -1,0 +1,14 @@
+services:
+  api:
+    #    build:
+    #      context: .
+    #      dockerfile: Dockerfile.debug
+    build: .
+    container_name: instaclone_api
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=full

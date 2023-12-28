@@ -1,0 +1,17 @@
+application:
+  port: 4000
+  rust_env: development
+
+database:
+  port: 3306
+  host: localhost
+  database_name: instaclone
+  username: root
+  password: ""
+
+test_database:
+  port: 3306
+  host: localhost
+  database_name: instaclone_test
+  username: root
+  password: ""

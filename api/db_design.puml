@@ -1,0 +1,105 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+'Instagram Clone
+
+entity users {
+    * id <<PK>>
+    --
+    * name
+    * username
+    * email
+    * password
+    * created_at
+    * updated_at
+}
+
+entity followers {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * follower_id <<FK -> users.id>>
+    * created_at
+}
+
+entity following {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * following_id <<FK -> users.id>>
+    * created_at
+}
+
+entity stories {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * file_url
+    * created_at
+}
+
+entity bookmarks {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * post_id <<FK -> posts.id>>
+    * created_at
+}
+
+entity favorites {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * post_id <<FK -> posts.id>>
+    * created_at
+}
+
+entity posts {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * description
+    * created_at
+    * updated_at
+}
+
+entity post_files {
+    * id <<PK>>
+    --
+    * post_id <<FK -> posts.id>>
+    * file_url
+}
+
+entity post_comments {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * post_id <<FK -> posts.id>>
+    parent_id <<FK -> comments.id>>
+    * comment
+    * created_at
+}
+
+entity post_likes {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * post_id <<FK -> posts.id>>
+}
+
+'What is the relationship between the entities?
+users }o--o{ followers : users has many followers
+users }o--o{ following : users has many following
+users }o--o{ stories : users has many stories
+users }o--o{ bookmarks : users has many bookmarks
+users }o--o{ favorites : users has many favorites
+users }o--o{ posts : users has many posts
+favorites }o--o{ posts : favorites has many posts
+bookmarks }o--o{ posts : bookmarks has many posts
+posts }o--|{ post_files : post has many files
+users }o--o{ post_likes : users can like many posts
+posts }o--o{ post_comments : posts has many comments
+posts }o--o{ post_likes : posts has many likes
+
+
+@enduml

@@ -1,0 +1,18 @@
+
+services:
+  parseable:
+    ports:
+      - "8081:8080"
+    build: .
+    image: instaclone-parseable
+    container_name: parseable
+    # Make sure to create .env file and set up the variables
+    # if you want to run this locally
+    env_file:
+      - .env
+    # These are public variables that you can set up
+    environment:
+      P_ADDR: 0.0.0.0:8080
+      P_SEND_ANONYMOUS_USAGE_DATA: false
+      P_S3_BUCKET: instaclone-logs
+      P_S3_REGION: ap-southeast-1

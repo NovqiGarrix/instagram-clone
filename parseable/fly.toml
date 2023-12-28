@@ -1,0 +1,28 @@
+# fly.toml app configuration file generated for instaclone-logs on 2023-12-27T19:58:59+07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "instaclone-logs"
+primary_region = "sin"
+
+[build]
+
+[env]
+  P_ADDR = "0.0.0.0:8080"
+  P_SEND_ANONYMOUS_USAGE_DATA = "false"
+  P_S3_BUCKET="instaclone-logs"
+  P_S3_REGION="ap-southeast-1"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
