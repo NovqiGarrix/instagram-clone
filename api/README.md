@@ -7,13 +7,11 @@ This is a RESTful API for an Instagram clone. It is built using Rust, sea_orm as
 Currently, the API is not deployed yet. It will be deployed to fly.io once I implement the observability features.
 
 ## Features
-- [ ] User registration
-- [ ] User login
-- [ ] User logout
+- [x] User registration
+- [x] User login
 - [ ] get user profile
 - [ ] update user profile
 - [ ] User profile delete
-- [ ] upload/update user profile picture
 - [ ] follow user
 - [ ] unfollow user
 - [ ] get followers

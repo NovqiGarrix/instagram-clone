@@ -10,8 +10,17 @@ entity users {
     * username
     * email
     * password
+    bio
+    * picture_url
     * created_at
     * updated_at
+}
+
+entity user_links {
+    * id <<PK>>
+    --
+    * user_id <<FK -> users.id>>
+    * link
 }
 
 entity followers {
@@ -77,6 +86,7 @@ entity post_comments {
     * post_id <<FK -> posts.id>>
     parent_id <<FK -> comments.id>>
     * comment
+    * like_count
     * created_at
 }
 
@@ -89,15 +99,16 @@ entity post_likes {
 
 'What is the relationship between the entities?
 users }o--o{ followers : users has many followers
+users }o--o{ user_links : users has many links
 users }o--o{ following : users has many following
 users }o--o{ stories : users has many stories
 users }o--o{ bookmarks : users has many bookmarks
 users }o--o{ favorites : users has many favorites
 users }o--o{ posts : users has many posts
 favorites }o--o{ posts : favorites has many posts
-bookmarks }o--o{ posts : bookmarks has many posts
+bookmarks }o--o{ posts : "bookmarks has many posts"
 posts }o--|{ post_files : post has many files
-users }o--o{ post_likes : users can like many posts
+users }o--o{ post_likes : ""users can like many posts"
 posts }o--o{ post_comments : posts has many comments
 posts }o--o{ post_likes : posts has many likes
 

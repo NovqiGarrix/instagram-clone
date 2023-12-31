@@ -1,4 +1,3 @@
-use std::borrow::ToOwned;
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
 
@@ -89,10 +88,6 @@ impl Settings {
 
         settings.try_deserialize().unwrap()
     }
-}
-
-pub fn set_testing_env() {
-    std::env::set_var("APP_APPLICATION__RUST_ENV", "testing");
 }
 
 impl DatabaseSettings {

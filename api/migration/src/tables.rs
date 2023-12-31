@@ -7,10 +7,19 @@ pub enum Users {
     Name,
     Username,
     Email,
-    #[sea_orm(iden = "text")]
+    Bio,
+    PictureUrl,
     Password,
     CreatedAt,
     UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub enum UserLinks {
+    Table,
+    Id,
+    UserId,
+    Link
 }
 
 #[derive(DeriveIden)]
@@ -83,8 +92,8 @@ pub enum PostComments {
     PostId,
     UserId,
     ParentId,
-    #[sea_orm(iden = "text")]
     Comment,
+    LikesCount,
     CreatedAt,
 }
 

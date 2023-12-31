@@ -1,0 +1,1639 @@
+openapi: 3.0.3
+info:
+  title: API Specification
+  description: API specification for the Instagram Clone API
+  version: 0.0.1
+  contact:
+    name: NovqiGarrix
+    url: https://twitter.com/NovqiGarrix
+
+servers:
+  - url: 'http://localhost:4000/api/v1'
+    description: Localhost server
+  - url: 'https://igclone.fly.dev/api/v1'
+    description: Fly.io server
+
+security:
+  - jwt: [ ]
+
+components:
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BadRequestError:
+      type: object
+      properties:
+        code:
+          type: integer
+          default: 400
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              error:
+                type: string
+                nullable: true
+                description: Error message if there is any
+              message:
+                type: string
+                nullable: true
+                description: Error message due to validation
+              field:
+                type: string
+                nullable: true
+                description: Field that cause the error
+    UnauthorizedError:
+      type: object
+      properties:
+        code:
+          type: integer
+          default: 401
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              error:
+                type: string
+    ForbiddenError:
+      type: object
+      properties:
+        code:
+          type: integer
+          default: 403
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              error:
+                type: string
+    NotFoundError:
+      type: object
+      properties:
+        code:
+          type: integer
+          default: 404
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              error:
+                type: string
+                description: The resource you are looking for is not found
+    InternalServerError:
+      type: object
+      properties:
+        code:
+          type: integer
+          default: 500
+        errors:
+          type: object
+          properties:
+            error:
+              type: string
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        username:
+          type: string
+        pictureUrl:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        links:
+          type: array
+          nullable: true
+          items:
+            type: string
+    SimpleUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        username:
+          type: string
+        pictureUrl:
+          type: string
+    Follower:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        username:
+          type: string
+    CreateFavoriteReqBody:
+      type: object
+      properties:
+        postId:
+          type: string
+    GetPostsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          default: 200
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              likesCount:
+                type: integer
+              commentsCount:
+                type: integer
+              firstFileUrl:
+                type: string
+
+
+  responses:
+    401:
+      description: Unauthorized. Could be because of missing or invalid or expired jwt token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UnauthorizedError'
+
+    403:
+      description: Forbidden. You are not authorized to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ForbiddenError'
+
+    500:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalServerError'
+
+paths:
+  "/auth/signup":
+    post:
+      tags:
+        - Auth API
+      summary: This endpoint is used to register a new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                fullName:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+        required: true
+      responses:
+        201:
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 201
+
+        400:
+          description: Bad Request. Could be because of missing required request body or invalid data on request body or the email already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/auth":
+    post:
+      tags:
+        - Auth API
+      summary: This endpoint is used to log in a user and get the jwt token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailUsername:
+                  type: string
+                password:
+                  type: string
+        required: true
+      responses:
+        200:
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    $ref: '#/components/schemas/SimpleUser'
+                  token:
+                    type: string
+                  refreshToken:
+                    type: string
+
+        400:
+          description: Bad Request. Could be because of missing required request body or invalid request body or invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/auth/me":
+    get:
+      tags:
+        - Auth API
+      security:
+        - jwt: [ ]
+      summary: This endpoint is used to get the current logged in user
+      responses:
+        200:
+          description: Successfully retrieved the current logged in user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    $ref: '#/components/schemas/SimpleUser'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/auth/token":
+    post:
+      description: This endpoint is used to get a new jwt token using the refresh token
+      tags:
+        - Auth API
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        200:
+          description: Successfully retrieved a new jwt token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  token:
+                    type: string
+
+        401:
+          description: Your refresh token is invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+
+  "/users/{username}":
+    patch:
+      tags:
+        - Users API
+      security:
+        - jwt: [ ]
+      summary: This endpoint is used to update user data
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Make sure to send all of the fields
+              properties:
+                bio:
+                  type: string
+                picture_url:
+                  type: string
+                links:
+                  type: array
+                  description: Make sure to send the existing links combined with the new links
+                  items:
+                    type: string
+      responses:
+        200:
+          description: Successfully update the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: object
+                    properties:
+                      bio:
+                        type: string
+                      picture_url:
+                        type: string
+                      links:
+                        type: array
+                        items:
+                          type: string
+
+        400:
+          description: Bad Request. Could be because of one of the required fields in the request body is missing or invalid data on request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to update is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    delete:
+      tags:
+        - Users API
+      summary: This endpoint is used to delete a user
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successfully update the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to delete is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        500:
+          $ref: '#/components/responses/500'
+
+    get:
+      tags:
+        - Users API
+      summary: This endpoint is used to get a user by username
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Successfully retrieved the user by username
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: object
+                    description: The fields could be customized by using the fields query parameter
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                      fullName:
+                        type: string
+                      username:
+                        type: string
+                      bio:
+                        type: string
+                      links:
+                        type: array
+                        items:
+                          type: string
+                      followersCount:
+                        type: integer
+                      followingCount:
+                        type: integer
+                      postsCount:
+                        type: integer
+                  token:
+                    type: string
+
+        400:
+          description: Bad Request. Could be because of missing required request body or invalid data on request body or invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        404:
+          description: The user you are trying to get is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/followers":
+    "get":
+      description: This endpoint is used to get a user's followers
+      tags:
+        - Followers API
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to get the followers
+      responses:
+        200:
+          description: Successfully retrieved the user's followers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Follower'
+
+        404:
+          description: The user you are trying to get is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+    post:
+      description: This endpoint is used to follow a user
+      tags:
+        - Followers API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to follow
+      responses:
+        200:
+          description: Successfully followed the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Follower'
+
+        400:
+          description: Bad Request. Could be because you are trying to follow yourself or you are trying to follow a user that you already followed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        404:
+          description: The user you are trying to follow is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+    delete:
+      description: This endpoint is used to unfollow a user
+      tags:
+        - Followers API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to unfollow
+      responses:
+        200:
+          description: Successfully unfollowed the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        400:
+          description: Bad Request. Could be because you are trying to unfollow yourself or you are trying to unfollow a user that you already unfollowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        404:
+          description: The user you are trying to unfollow is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/folowing":
+    "get":
+      description: This endpoint is used to get a user's following
+      tags:
+        - Following API
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to get the following
+      responses:
+        200:
+          description: Successfully retrieved the user's following
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Follower'
+
+        404:
+          description: The user you are trying to get is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/following/posts":
+    get:
+      description: This endpoint is used to get a user's following posts
+      tags:
+        - Posts API
+        - Following API
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to get the following posts
+      responses:
+        200:
+          description: Successfully retrieved the user's following posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      description:
+                        type: string
+                      files:
+                        type: array
+                        items:
+                          type: string
+                      createdAt:
+                        type: string
+                      user:
+                        type: object
+                        properties:
+                          username:
+                            type: string
+                          pictureUrl:
+                            type: string
+                          hasStories:
+                            type: boolean
+                      commentsCount:
+                        type: integer
+                      likesCount:
+                        type: integer
+
+        404:
+          description: The user you are trying to get is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/posts":
+    get:
+      description: This endpoint is used to get a user's posts
+      tags:
+        - Posts API
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to get the posts
+      responses:
+        200:
+          description: Successfully retrieved the user's posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        likesCount:
+                          type: integer
+                        commentsCount:
+                          type: integer
+                        firstFileUrl:
+                          type: string
+
+        404:
+          description: The user you are trying to get is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    post:
+      description: This endpoint is used to create a post
+      tags:
+        - Posts API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to create the post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                files:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        200:
+          description: Successfully created the post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      description:
+                        type: string
+                      files:
+                        type: array
+                        items:
+                          type: string
+                      createdAt:
+                        type: string
+
+        400:
+          description: Bad Request. Could be because of missing required request body or invalid data on request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/posts/{postId}":
+    get:
+      description: This endpoint is used to get a post by id
+      tags:
+        - Posts API
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to get the post
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the post you want to get
+      responses:
+        200:
+          description: Successfully retrieved the post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      description:
+                        type: string
+                      files:
+                        type: array
+                        items:
+                          type: string
+                      createdAt:
+                        type: string
+                      user:
+                        type: object
+                        properties:
+                          username:
+                            type: string
+                          pictureUrl:
+                            type: string
+                          hasStories:
+                            type: boolean
+                      likesCount:
+                        type: integer
+                      comments:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            comment:
+                              type: string
+                            createdAt:
+                              type: string
+                            likesCount:
+                              type: integer
+                            user:
+                              type: object
+                              properties:
+                                username:
+                                  type: string
+                                pictureUrl:
+                                  type: string
+                                hasStories:
+                                  type: boolean
+                            parentCommentId:
+                              type: string
+                              nullable: true
+
+        404:
+          description: The user or post you are trying to get is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    delete:
+      description: This endpoint is used to delete a post
+      tags:
+        - Posts API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to delete the post
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the post you want to delete
+      responses:
+        200:
+          description: Successfully deleted the post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user or post you are trying to delete is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    patch:
+      description: This endpoint is used to update a post
+      tags:
+        - Posts API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to update the post
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the post you want to update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+      responses:
+        200:
+          description: Successfully updated the post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user or post you are trying to update is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/posts/{postId}/likes":
+    post:
+      description: This endpoint is used to like/dislike a post
+      tags:
+        - Posts API
+        - PostLikes API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to like/dislike the post
+
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the post you want to like/dislike the post
+      responses:
+        200:
+          description: Successfully liked/disliked a post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        404:
+          description: The user or post you are trying to like is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/posts/{postId}/comments":
+    post:
+      description: This endpoint is used to create a comment on a post
+      tags:
+        - Posts API
+        - PostComments API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to create the comment
+
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the post you want to create the comment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                parentCommentId:
+                  type: string
+                  nullable: true
+      responses:
+        200:
+          description: Successfully created a comment on a post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        404:
+          description: The user or post you are trying to comment is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/posts/{postId}/comments/{commentId}":
+    delete:
+      description: This endpoint is used to delete a comment on a post
+      tags:
+        - Posts API
+        - PostComments API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the user you want to delete the comment
+
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the post you want to delete the comment
+
+        - name: commentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The id of the comment you want to delete
+      responses:
+        200:
+          description: Successfully deleted a comment on a post
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        404:
+          description: The user or post you are trying to delete is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/stories":
+    post:
+      description: This endpoint is used to create a user story
+      tags:
+        - Stories API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to create the story
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fileUrl:
+                  type: string
+      responses:
+        201:
+          description: Successfully created a user story
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 201
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      fileUrl:
+                        type: string
+                      createdAt:
+                        type: string
+
+        400:
+          description: Bad Request. Could be because of missing required request body or invalid data on request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestError'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to create the story is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    get:
+      description: This endpoint is used get user's stories
+      tags:
+        - Stories API
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to get the stories
+      responses:
+        200:
+          description: Successfully retrieved user's stories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        fileUrl:
+                          type: string
+                        createdAt:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            username:
+                              type: string
+                            pictureUrl:
+                              type: string
+                            hasStories:
+                              type: boolean
+
+        404:
+          description: The user you are trying to get the stories is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/stories/{storyId}":
+    delete:
+      description: This endpoint is used to delete a user story
+      tags:
+        - Stories API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to delete the story
+      responses:
+        200:
+          description: Successfully deleted a user story
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to delete the story is not found or the story you are trying to delete is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/favorites":
+    post:
+      description: This endpoint is used to add a post to user's favorites
+      tags:
+        - Favorites API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to add the post to favorites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFavoriteReqBody'
+      responses:
+        201:
+          description: Successfully added a post to user's favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 201
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to delete the story is not found or the post you are trying to add is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    get:
+      description: This endpoint is used to get user's favorite posts
+      tags:
+        - Favorites API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to get the favorite posts
+      responses:
+        200:
+          description: Successfully retrieved user's favorite posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPostsResponse'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to get the favorite posts is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/favorites/{favoriteId}":
+    delete:
+      description: This endpoint is used to delete a post from user's favorites
+      tags:
+        - Favorites API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to delete the favorite
+        - name: favoriteId
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The id of the favorite you want to delete
+      responses:
+        200:
+          description: Successfully deleted a user's favorite
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to delete the favorite is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/bookmarks":
+    post:
+      description: This endpoint is used to add a post to user's bookmarks
+      tags:
+        - Bookmarks API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to add
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFavoriteReqBody'
+      responses:
+        201:
+          description: Successfully added a post to user's bookmarks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 201
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to add the bookmark is not found or the post you are trying to add is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+    get:
+      description: This endpoint is used to get user's bookmarks
+      tags:
+        - Bookmarks API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to get the bookmarks
+      responses:
+        200:
+          description: Successfully retrieved user's bookmarks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPostsResponse'
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to get the bookmark is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'
+
+  "/users/{username}/bookmarks/{bookmarkId}":
+    delete:
+      description: This endpoint is used to delete a user's bookmark
+      tags:
+        - Bookmarks API
+      security:
+        - jwt: [ ]
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The username of the user you want to delete the bookmark
+        - name: bookmarkId
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The id of the bookmark you want to delete
+      responses:
+        200:
+          description: Successfully deleted a user's bookmark
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    default: 200
+
+        401:
+          $ref: '#/components/responses/401'
+
+        403:
+          $ref: '#/components/schemas/ForbiddenError'
+
+        404:
+          description: The user you are trying to delete the bookmark is not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+        500:
+          $ref: '#/components/responses/500'

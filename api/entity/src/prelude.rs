@@ -9,4 +9,5 @@ pub use super::post_files::Entity as PostFiles;
 pub use super::post_likes::Entity as PostLikes;
 pub use super::posts::Entity as Posts;
 pub use super::stories::Entity as Stories;
+pub use super::user_links::Entity as UserLinks;
 pub use super::users::Entity as Users;

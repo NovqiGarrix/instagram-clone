@@ -1,6 +1,8 @@
+use actix_web::http::StatusCode;
 use base64::{engine::general_purpose, Engine as _};
 use jsonwebtoken::*;
 use serde::de::DeserializeOwned;
+use crate::Result;
 use crate::configuration::JwtSettings;
 
 use crate::error::HttpResponseError;
@@ -10,7 +12,7 @@ pub const JWT_AUDIENCE: &str = "instaclone";
 pub fn sign<TPayload: serde::Serialize>(
     payload: &TPayload,
     config: &JwtSettings,
-) -> Result<String, HttpResponseError> {
+) -> Result<String> {
     let header = Header::new(Algorithm::RS256);
 
     let private_key = match general_purpose::STANDARD.decode(&config.private_key) {
@@ -42,7 +44,7 @@ pub fn sign<TPayload: serde::Serialize>(
 pub fn verify<TPayload: DeserializeOwned>(
     token: &str,
     config: &JwtSettings,
-) -> Result<TPayload, HttpResponseError> {
+) -> Result<TPayload> {
     let decoded_base64_pubkey = match general_purpose::STANDARD.decode(&config.public_key) {
         Ok(pub_key) => pub_key,
         Err(e) => {
@@ -66,8 +68,31 @@ pub fn verify<TPayload: DeserializeOwned>(
         Ok(token) => Ok(token.claims),
         Err(e) => {
             tracing::error!("Decoding user's JWT (Kind: {:?}): {:?}", &e.kind(), e);
-            // TODO: You can do better
-            Err(HttpResponseError::internal_server_error())
+
+            match e.kind() {
+                // The payload does not match with the generic type
+                errors::ErrorKind::Json(e) => {
+                    tracing::error!("Payload from jwt does not match with the generic payload: {:?}", e);
+
+                  Err(
+                      HttpResponseError::default()
+                          .set_code(StatusCode::BAD_REQUEST.as_u16())
+                          .set_error_message("Invalid payload")
+                  )
+                },
+
+                // When user is trying to register a token with different
+                // algorithm than we have
+                errors::ErrorKind::InvalidAlgorithm => {
+                    Err(
+                        HttpResponseError::default()
+                            .set_code(StatusCode::BAD_REQUEST.as_u16())
+                            .set_error_message("Invalid JWT token")
+                    )
+                }
+
+                _ => Err(HttpResponseError::internal_server_error())
+            }
         }
     }
 }
@@ -98,7 +123,7 @@ mod tests {
 
     fn gen_payload() -> Payload {
         Payload {
-            aud: "sicantikbangsa.com".into(),
+            aud: "instaclone".into(),
             exp: (Utc::now() + Duration::hours(2)).timestamp(),
             name: String::from("SiCantikBangsa"),
         }
@@ -115,4 +140,5 @@ mod tests {
 
         assert_eq!(decoded.name, payload.name);
     }
+
 }

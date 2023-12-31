@@ -1,24 +1,25 @@
+use actix_web::body::BoxBody;
 use actix_web::http::{header, StatusCode};
 use actix_web::HttpResponse;
 use sea_orm::DbErr;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ResponseError {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub field: Option<String>
+    pub field: Option<String>,
 }
 
 impl ResponseError {
     pub fn common_error(error: &str) -> Self {
         Self {
-            error: None,
-            message: Some(error.to_owned()),
-            field: None
+            error: Some(error.to_owned()),
+            message: None,
+            field: None,
         }
     }
 
@@ -26,12 +27,12 @@ impl ResponseError {
         Self {
             error: None,
             message: Some(message.to_owned()),
-            field: Some(field.to_owned())
+            field: Some(field.to_owned()),
         }
     }
 }
 
-#[derive(Serialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 pub struct HttpResponseError {
     pub code: Option<u16>,
     pub errors: Vec<ResponseError>,
@@ -72,28 +73,41 @@ impl HttpResponseError {
     pub fn internal_server_error() -> Self {
         Self {
             code: Some(500),
-            errors: vec![
-                ResponseError::common_error("Internal Server Error")
-            ]
+            errors: vec![ResponseError::common_error("Internal Server Error")],
         }
     }
 
-    pub fn set_code(&mut self, code: u16) -> &Self {
+    pub fn set_code(mut self, code: u16) -> Self {
         self.code = Some(code);
         self
     }
 
-    pub fn set_error_message(&mut self, error: &'static str) -> &Self {
+    pub fn set_error_message(mut self, error: &'static str) -> Self {
         let err = ResponseError::common_error(error);
         self.errors = vec![err];
         self
     }
 
-    pub fn set_validation_error(&mut self, field: &str, message: &str) -> &Self {
+    pub fn set_validation_error(mut self, field: &str, message: &str) -> Self {
         let err = ResponseError::for_validation(field, message);
 
         self.errors.push(err);
         self
     }
 
+    pub fn set_validation_errors(mut self, errors: Vec<ResponseError>) -> Self {
+        self.errors = errors;
+        self
+    }
+}
+
+impl actix_web::ResponseError for HttpResponseError {
+    fn status_code(&self) -> StatusCode {
+        from_code_to_status_code(self.code.unwrap())
+    }
+
+    fn error_response(&self) -> HttpResponse<BoxBody> {
+        HttpResponse::build(self.status_code())
+            .json(self)
+    }
 }

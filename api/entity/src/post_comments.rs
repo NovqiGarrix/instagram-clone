@@ -14,7 +14,8 @@ pub struct Model {
     #[sea_orm(column_type = "Binary(BlobSize::Blob(Some(16)))", nullable)]
     pub parent_id: Option<Vec<u8>>,
     #[sea_orm(column_type = "Text")]
-    pub text: String,
+    pub comment: String,
+    pub likes_count: i32,
     pub created_at: DateTimeUtc,
 }
 

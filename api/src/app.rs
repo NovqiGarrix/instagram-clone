@@ -1,4 +1,3 @@
-use crate::configuration::set_testing_env;
 use crate::{AppState, db::connect_db};
 use actix_cors::Cors;
 use actix_web::{dev::Server, middleware, web, App, HttpResponse, HttpServer};
@@ -6,6 +5,7 @@ use std::net::TcpListener;
 use tracing::{info, instrument};
 use tracing_actix_web::TracingLogger;
 use crate::configuration::Settings;
+use crate::routes::get_v1_routes;
 
 async fn hello() -> HttpResponse {
     HttpResponse::Ok().json(serde_json::json!({ "code": 200 }))
@@ -40,36 +40,10 @@ pub async fn app(listener: TcpListener, config: Settings) -> Result<Server, std:
             .wrap(cors)
             .app_data(web::Data::new(app_state.clone()))
             .route("/", web::get().to(hello))
-            // .service(web::scope("/api/v1").configure(app_v1_handlers))
+            .service(web::scope("/api/v1").configure(get_v1_routes))
     })
         .listen(listener)?
         .run();
 
     Ok(app)
-}
-
-#[derive(Clone)]
-pub struct MyTestServer {
-    pub address: String,
-}
-
-pub async fn start_test_server() -> MyTestServer {
-    set_testing_env();
-
-    let host = String::from("127.0.0.1");
-    let listener =
-        TcpListener::bind(format!("{}:0", &host.to_owned())).expect("Failed to bind TCP Listener");
-
-    let port = listener.local_addr().unwrap().port();
-    let address = format!("{}:{}", host, port);
-
-    let config = Settings::get_configuration();
-
-    let server = app(listener, config)
-        .await
-        .expect("Failed to get the server: ");
-
-    actix_web::rt::spawn(server);
-
-    MyTestServer { address }
 }

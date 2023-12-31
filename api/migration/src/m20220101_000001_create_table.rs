@@ -1,5 +1,5 @@
 use sea_orm_migration::prelude::*;
-use crate::tables::{Bookmarks, Favorites, Followers, Following, PostComments, PostFiles, PostLikes, Posts, Stories, Users};
+use crate::tables::{Bookmarks, Favorites, Followers, Following, PostComments, PostFiles, PostLikes, Posts, Stories, UserLinks, Users};
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -24,9 +24,35 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Users::Name).string_len(65).not_null())
                     .col(ColumnDef::new(Users::Username).string_len(32).not_null().unique_key())
                     .col(ColumnDef::new(Users::Email).string_len(32).not_null().unique_key())
+                    .col(ColumnDef::new(Users::Bio).text())
+                    .col(ColumnDef::new(Users::PictureUrl).text().not_null())
                     .col(ColumnDef::new(Users::Password).text().not_null())
                     .col(ColumnDef::new(Users::CreatedAt).timestamp().not_null().default(Expr::current_timestamp()))
                     .col(ColumnDef::new(Users::UpdatedAt).timestamp().not_null().default(Expr::current_timestamp()))
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(UserLinks::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(UserLinks::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(UserLinks::UserId).uuid().not_null().unique_key())
+                    .col(ColumnDef::new(UserLinks::Link).text().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_user_links_users")
+                            .from(UserLinks::Table, UserLinks::UserId)
+                            .to(Users::Table, Users::Id)
+                    )
                     .to_owned(),
             )
             .await?;
@@ -244,6 +270,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(PostComments::PostId).uuid().not_null())
                     .col(ColumnDef::new(PostComments::ParentId).uuid())
                     .col(ColumnDef::new(PostComments::Comment).text().not_null())
+                    .col(ColumnDef::new(PostComments::LikesCount).integer().not_null().default(0))
                     .col(ColumnDef::new(PostComments::CreatedAt).timestamp().not_null().default(Expr::current_timestamp()))
                     .foreign_key(
                         ForeignKey::create()

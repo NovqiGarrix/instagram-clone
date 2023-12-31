@@ -16,8 +16,12 @@ pub struct Model {
     pub username: String,
     #[sea_orm(unique)]
     pub email: String,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub bio: Option<String>,
     #[sea_orm(column_type = "Text")]
-    pub text: String,
+    pub picture_url: String,
+    #[sea_orm(column_type = "Text")]
+    pub password: String,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }
@@ -32,6 +36,8 @@ pub enum Relation {
     Posts,
     #[sea_orm(has_many = "super::stories::Entity")]
     Stories,
+    #[sea_orm(has_one = "super::user_links::Entity")]
+    UserLinks,
 }
 
 impl Related<super::bookmarks::Entity> for Entity {
@@ -55,6 +61,12 @@ impl Related<super::posts::Entity> for Entity {
 impl Related<super::stories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Stories.def()
+    }
+}
+
+impl Related<super::user_links::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::UserLinks.def()
     }
 }
 
